@@ -1,6 +1,6 @@
 ##########################################################################
 #Author: Jamie Bossenbroek
-#Date: 7/9/20
+#Date: 7/16/21
 #
 #This program will allow the user to semi-automatically analyze PW Doppler and
 #Color Mode video files. This program gives the user the ability to obtain 
@@ -13,7 +13,7 @@
 #reduces time of analysis and nearly eliminates intraoperator bias.
 #
 ##########################################################################
-import time, cv2, scipy, tkinter, guis, vevoAVIparser, colormode, math
+import time, cv2, scipy, tkinter, guis, vevoAVIparser, colormode, math, re
 from tkinter import filedialog
 from skimage import morphology
 import pandas as pd
@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 
 
 
+#Track analysis time
 startTime = time.perf_counter()
 
 ###File selection, parameter input, and video parsing
@@ -29,72 +30,43 @@ startTime = time.perf_counter()
 root = tkinter.Tk()
 root.withdraw()
 folderpath = filedialog.askdirectory(parent = root, initialdir = "/", title = "Select Folder Path")
-
-#Input filename where doppler analysis results will be stored
-savefile = filedialog.asksaveasfilename(parent = root, initialdir = folderpath, title = "Save Results As:")
-if not savefile.endswith('.xlsx', len(savefile) - 5):
-    savefile += '.xlsx'
  
-    
 #Open question dialogue for choice of method analysis: Doppler or Color Mode
 root.deiconify()
 window = guis.Method(root)
 root.mainloop()
 choice = window.choice
 
-#Select files for analysis
 filename = [] #Store doppler filenames
 pics = [] #Store parsed video images
 TP = [] #Store time per pixel
 velocityMax = [] #Store maximum velocities
-angleG = [] #Store probe angle
-maxPen = [] #Store max penetration
-minPen = [] #Store min penetration
-root = tkinter.Tk()
-root.withdraw()
-
-#Open question dialogue for number of baseline Doppler videos to be analyzed
-root.deiconify() 
-window = guis.Num(root, 1)
-root.mainloop()
-numBLVideos = int(window.num)
 
 #Select baseline files for analysis
 root = tkinter.Tk()
 root.withdraw()
-for i in range(numBLVideos):
-    vfile = filedialog.askopenfilename(parent = root, initialdir = folderpath, title = "Select baseline video file", filetypes = [("Video files","*.avi")])
-    filename.append(vfile)
-
-#Open question dialogue for number of hyperemic Doppler videos to be analyzed
-root.deiconify() 
-window = guis.Num(root, 2)
-root.mainloop()
-numHVideos = int(window.num)
+blfiles = filedialog.askopenfilenames(parent = root, initialdir = folderpath, title = "Select baseline video files", filetypes = [("Video files","*.avi")])
+numBlVideos=len(list(blfiles))
+filename.extend(list(blfiles))
 
 #Select hyperemic files for analysis
-root = tkinter.Tk()
-root.withdraw()
-for i in range(numHVideos):
-    vfile = filedialog.askopenfilename(parent = root, initialdir = folderpath, title = "Select hyperemic video file", filetypes = [("Video files","*.avi")])
-    filename.append(vfile) 
+hfiles = filedialog.askopenfilenames(parent = root, initialdir = folderpath, title = "Select hyperemic video files", filetypes = [("Video files","*.avi")])
+numHVideos=len(list(hfiles))
+filename.extend(list(hfiles))
 root.destroy()
 
-for video in filename:
-    #Input parameters for each video
-    root = tkinter.Tk()
-    window = guis.DataEntryOne(root, video, choice)
-    root.mainloop()
-    velocityMax.append(int(window.Velocity_Max)) #Store maximum velocity
-    if choice == "Combined Analysis":
-        angleG.append(int(window.VAngleG)) #Store probe angle
-        maxPen.append(float(window.Max_Pen)) #Store maximum penetration depth
-        minPen.append(float(window.Min_Pen)) #Store minimum penetration depth
-    
+#Save filename where results will be stored
+cut = [m.start() for m in re.finditer('_', filename[0])][2]
+savefile = filename[0][0:cut] + '.xlsx'
+
+
+
+for video in filename:        
     #Read in video files and proccess with vevoAVIparser
-    pictureBL, timeperpixelBL = vevoAVIparser.parse(video) #Return parsed image and time per pixel
-    pics.append(pictureBL)
-    TP.append(timeperpixelBL)
+    picture, timeperpixel, maxVel = vevoAVIparser.parse(video) #Return parsed image, time per pixel, and max velocity
+    pics.append(picture)
+    TP.append(timeperpixel)
+    velocityMax.append(maxVel)
 
 #Select colormode videos for analysis        
 if choice == "Combined Analysis":
@@ -123,11 +95,10 @@ for picture in pics:
     ecgTopWindow = blankRows[ecgRowStart[-1]] + 2 #This is below top of gray box
     
     dopplerRegion = picture[0:horizLineRow+1, :] #Crop everything below baseline
-    ecgRegion = picture[ecgTopWindow:ecgTopWindow + diffblankRows[ecgRowStart[-1]]-3, :] #Crop ECG pattern
+    ecgRegion = picture[ecgTopWindow:, :] #Crop ECG pattern
     
-    vertPixelsMax = blankRows[ecgRowStart[0]+1] - blankRows[ecgRowStart[0]] #Height of Doppler Region column in pixels
+    (vertPixelsMax, h) = dopplerRegion.shape #Height of Doppler Region column in pixels
     velocityPerPixel = velocityMax[countALL] / vertPixelsMax #Calculate velocity per pixel
-    timePerPixel = .1/TP[countALL] #Calculate time-per-pixel
     
     
     
@@ -216,7 +187,7 @@ for picture in pics:
             ecgStore.append(ecgVelocity[0]) #Store first pixel from top
     
     #Create axis of values
-    timeAxis = np.linspace(0, timePerPixel*(len(dopplerRegion[0])-1), len(removeNoise[0])) #Horizontal time axis in ms
+    timeAxis = np.linspace(0, TP[countALL]*(len(dopplerRegion[0])-1), len(removeNoise[0])) #Horizontal time axis in ms
     vertAxis = np.linspace(0, velocityPerPixel*len(removeNoise), len(removeNoise)) #Vertical velocity axis in mm/s
     vertAxisECG = np.linspace(0, velocityPerPixel*len(ecgRegionBinary), len(ecgRegionBinary)) #Vertical velocity axis in mm/s
     
@@ -383,11 +354,11 @@ for picture in pics:
                                DV1vel, filtMax, DV2vel, bpm[count], integral])
 
         #Plot critical points
-        plt.scatter([begTime/timePerPixel], [len(dopplerRegion)-begVel/velocityPerPixel], s=1, c='b')
-        plt.scatter([DV1time/timePerPixel], [len(dopplerRegion)-DV1vel/velocityPerPixel], s=1, c='g')
-        plt.scatter([PVtime/timePerPixel], [len(dopplerRegion)-filtMax/velocityPerPixel], s=1, c='y')
-        plt.scatter([DV2time/timePerPixel], [len(dopplerRegion)-DV2vel/velocityPerPixel], s=1, c='m')
-        plt.scatter([PDDtime/timePerPixel], [len(dopplerRegion)-PDDplot/velocityPerPixel], s=1, c='r')
+        plt.scatter([begTime/TP[countALL]], [len(dopplerRegion)-begVel/velocityPerPixel], s=1, c='b')
+        plt.scatter([DV1time/TP[countALL]], [len(dopplerRegion)-DV1vel/velocityPerPixel], s=1, c='g')
+        plt.scatter([PVtime/TP[countALL]], [len(dopplerRegion)-filtMax/velocityPerPixel], s=1, c='y')
+        plt.scatter([DV2time/TP[countALL]], [len(dopplerRegion)-DV2vel/velocityPerPixel], s=1, c='m')
+        plt.scatter([PDDtime/TP[countALL]], [len(dopplerRegion)-PDDplot/velocityPerPixel], s=1, c='r')
         
         count += 1
         
