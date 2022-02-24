@@ -1,6 +1,6 @@
 ##########################################################################
 #Author: Jamie Bossenbroek
-#Date: 7/9/20
+#Date: 8/28/21
 #
 #This program will allow the user to semi-automatically analyze PW Doppler and
 #Color Mode video files. This program gives the user the ability to obtain 
@@ -22,13 +22,15 @@ import matplotlib.pyplot as plt
 
 
 
+# Track analysis time
 startTime = time.perf_counter()
 
 ###File selection, parameter input, and video parsing
 #Select folder containing video files to be analyzed
 root = tkinter.Tk()
 root.withdraw()
-folderpath = filedialog.askdirectory(parent = root, initialdir = "/", title = "Select Folder Path")
+#folderpath = filedialog.askdirectory(parent = root, initialdir = "/", title = "Select Folder Path")
+folderpath = '/Users/jamieb/Documents/videos'
 
 #Input filename where doppler analysis results will be stored
 savefile = filedialog.asksaveasfilename(parent = root, initialdir = folderpath, title = "Save Results As:")
@@ -50,51 +52,29 @@ velocityMax = [] #Store maximum velocities
 angleG = [] #Store probe angle
 maxPen = [] #Store max penetration
 minPen = [] #Store min penetration
-root = tkinter.Tk()
-root.withdraw()
-
-#Open question dialogue for number of baseline Doppler videos to be analyzed
-root.deiconify() 
-window = guis.Num(root, 1)
-root.mainloop()
-numBLVideos = int(window.num)
 
 #Select baseline files for analysis
 root = tkinter.Tk()
 root.withdraw()
-for i in range(numBLVideos):
-    vfile = filedialog.askopenfilename(parent = root, initialdir = folderpath, title = "Select baseline video file", filetypes = [("Video files","*.avi")])
-    filename.append(vfile)
-
-#Open question dialogue for number of hyperemic Doppler videos to be analyzed
-root.deiconify() 
-window = guis.Num(root, 2)
-root.mainloop()
-numHVideos = int(window.num)
+blfiles = filedialog.askopenfilenames(parent = root, initialdir = folderpath, title = "Select baseline video files", filetypes = [("Video files","*.avi")])
+numBLVideos=len(list(blfiles))
+filename.extend(list(blfiles))
 
 #Select hyperemic files for analysis
-root = tkinter.Tk()
-root.withdraw()
-for i in range(numHVideos):
-    vfile = filedialog.askopenfilename(parent = root, initialdir = folderpath, title = "Select hyperemic video file", filetypes = [("Video files","*.avi")])
-    filename.append(vfile) 
+hfiles = filedialog.askopenfilenames(parent = root, initialdir = folderpath, title = "Select hyperemic video files", filetypes = [("Video files","*.avi")])
+numHVideos=len(list(hfiles))
+filename.extend(list(hfiles))
 root.destroy()
 
 for video in filename:
-    #Input parameters for each video
-    root = tkinter.Tk()
-    window = guis.DataEntryOne(root, video, choice)
-    root.mainloop()
-    velocityMax.append(int(window.Velocity_Max)) #Store maximum velocity
-    if choice == "Combined Analysis":
-        angleG.append(int(window.VAngleG)) #Store probe angle
-        maxPen.append(float(window.Max_Pen)) #Store maximum penetration depth
-        minPen.append(float(window.Min_Pen)) #Store minimum penetration depth
-    
     #Read in video files and proccess with vevoAVIparser
-    pictureBL, timeperpixelBL = vevoAVIparser.parse(video) #Return parsed image and time per pixel
+    pictureBL, timeperpixelBL, maxVel = vevoAVIparser.parse(video) #Return parsed image and time per pixel
     pics.append(pictureBL)
     TP.append(timeperpixelBL)
+    velocityMax.append(maxVel) #Store maximum velocity
+    print('MaxVel: ' + str(maxVel))
+    
+    
 
 #Select colormode videos for analysis        
 if choice == "Combined Analysis":
@@ -104,6 +84,17 @@ if choice == "Combined Analysis":
     hyperemicCModeFile = filedialog.askopenfilename(parent = root, initialdir = folderpath, title = "Select hyperemic colormode file", filetypes = [("Video files","*.avi")])
     filenameCMode = [baselineCModeFile, hyperemicCModeFile]
     root.destroy()
+    
+    #Input parameters for bl and hyperemia colormode
+    root = tkinter.Tk()
+    window = guis.DataEntryOne(root, filename[0], filename[numBLVideos])
+    root.mainloop()
+    angleG.extend(list(window.VAngleG)) #Store probe angle
+    angleG = [int(item) for item in angleG]
+    maxPen.extend(list(window.Max_Pen)) #Store maximum penetration depth
+    maxPen = [float(item) for item in maxPen]
+    minPen.extend(list(window.Min_Pen)) #Store minimum penetration depth
+    minPen = [float(item) for item in minPen]
     
 
 
@@ -341,6 +332,7 @@ for picture in pics:
         #Diastolic velocity or beginning of diastolic phase (BD)
         fifteenCycle = (timeCycle[-1]-timeCycle[0]) * .075 #7.5% of total beat duration
         fifteenWinStart = timeCycle[PDAloc] - fifteenCycle #Time 7.5% prior to peak
+k
         index15 = np.argmin([abs(x - fifteenWinStart) for x in timeCycle]) #Find index of time closest to %7.5
         DV1vel = min(filtEnvelope[index15:PDAloc+1]) #Decay velocity
         DV1time = timeCycle[[i for i, x in enumerate(filtEnvelope) if x == DV1vel][0]] #Decay velocity time
@@ -394,7 +386,7 @@ for picture in pics:
     #Resize and display plot
     fig = plt.gcf()
     fig.set_size_inches(16, 4)
-    figname = 'plot' + str(countALL) + '.png'
+    figname = savefile[:-5] + '_' + str(countALL+1) + '.png'
     fig.savefig(figname, dpi=200)
     plt.show()
     

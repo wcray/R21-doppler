@@ -1,6 +1,6 @@
 ##########################################################################
 # Author: Jamie Bossenbroek
-# Date: 2/18/20
+# Date: 8/28/21
 #
 # The purpose of this function is to parse together AVI (*.avi)
 # PW Doppler Files from VEVO Software. The output will be a grayscale
@@ -10,9 +10,10 @@
 #
 ##########################################################################
 
-import cv2, time
+import cv2
 import numpy as np
 from PIL import Image, ImageChops
+import pytesseract
 
 def firstImage(videoFile):
     '''
@@ -23,6 +24,30 @@ def firstImage(videoFile):
     ret, frame = vid.read()
     return frame
     
+
+
+def autoVel(img):
+    '''
+    This function returns a list of numbers identified in a given image.
+    Numbers are assumed to be vertically aligned, and then image is assumed
+    to be cropped to the region of interest
+    '''
+    #cMode = img_grey[breakageR[4]:breakage[5], :breakage[1]]
+
+    #Binarize and invert images    
+    img = np.invert(img)
+    img = cv2.threshold(img, 140, 255, cv2.THRESH_BINARY)[1]
+    
+    #Read text
+    pytesseract.pytesseract.tesseract_cmd = '/usr/local/Cellar/tesseract/4.1.1/bin/tesseract'
+    tconfig = r'--psm 4 digits'
+    numFound = pytesseract.image_to_string(img, lang='eng', config=tconfig)
+    
+    digits = filter(lambda x: x != "", numFound.split("\n"))
+    
+    return list(digits)
+
+
 
 def parse(videoFile):
     ###Create video object    
@@ -51,22 +76,20 @@ def parse(videoFile):
     #Values depending on video size
     ##Note: [slider bar row, slider bar column, temperature black-out, Vevo logo black-out, slide bar minimum]
     print('height: ' + str(height) + ' width: ' + str(width))
-    if width == 1168 and height == 864:
-        values = [490, 1022, 1046, 41, 1000]
-    elif width == 880 and height == 666:
+    if width == 880 and height == 666:
         values = [378, 772, 830, 34, 500]
+    elif width == 1168 and height == 864:
+        values = [490, 1022, 1046, 41, 1000]
+    elif width == 1168 and height == 872:
+        values = [496, 1022, 1046, 42, 1000]
+    elif width == 1168 and height == 880:
+        values = [499, 1021, 1046, 43, 1000]
+    elif width == 1168 and height == 896:
+        values = [498, 1024, 1046, 45, 1000]
     else:
-        critcut = round(0.567 * height)
-        sc = round(0.875 * width)
-        if height == 872:
-            critcut = 496
-        elif height == 880:
-            critcut = 499
-            sc = 1021
-        elif height == 896:
-            critcut = 498
-            sc = 1021
-        values = [critcut, sc, round(0.895 * width), round(0.125*height)-67, 1000]
+        #Default values
+        values = [round(0.567 * height), round(0.875 * width), round(0.895 * width), round(0.125*height)-67, 1000]
+    print('Using values: ' + str(values))
 
 
 
@@ -75,18 +98,34 @@ def parse(videoFile):
     grayImage = cv2.cvtColor(videoFrames[0], cv2.COLOR_RGB2GRAY) #Convert to grayscale
     pixelRowMean = np.average(grayImage, axis = 1) #Pixel row mean
     blackRows = [i for i, x in enumerate(pixelRowMean) if x == 0] #Find black rows
-    breakage = []
-    count = 0
+    pixelColumnMean = np.average(grayImage, axis = 0) #Pixel row mean
+    blackColumns = [i for i, x in enumerate(pixelColumnMean) if x == 0] #Find black columns
     
     #Find where blank sections occur and store last row of each section
+    breakageR = []
+    count = 0
     for row in blackRows[:-1]:
         if blackRows[count + 1] - blackRows[count] != 1: #Indicates new section begins
-            breakage.append(row) #Hold location for later crop
+            breakageR.append(row) #Hold location for later crop
         count += 1
         
+    #Find where blank sections occur and store last column of each section
+    breakageC = []
+    count = 0
+    for column in blackColumns[:-1]:
+        if blackColumns[count + 1] - blackColumns[count] != 1: #Indicates new section begins
+            breakageC.append(column) #Hold location for later crop
+        count += 1
+
+    if len(breakageC) < 3:
+        height, length = grayImage.shape
+        breakageC.append(length);
+    velScape = grayImage[breakageR[5]-10:breakageR[6], breakageC[1]:breakageC[2]]
+    maxVel = int(autoVel(velScape)[0])    
+    
     #Cropping frames vertically
-    BottomWindowCutoff = breakage[-2] #Below ECG
-    TopWindowCutoff = breakage[-4] #Doppler Window start
+    BottomWindowCutoff = breakageR[-2] #Below ECG
+    TopWindowCutoff = breakageR[-4] #Doppler Window start
     cropImages = []
     for image in videoFrames:
         cropImages.append(image[TopWindowCutoff:BottomWindowCutoff+1, :]) #Crop each frame
@@ -166,19 +205,19 @@ def parse(videoFile):
             check = True
             c = -5
             #Check that frame is not next to actual slider bar reset frame
-            while c < 10 and (index + c < len(dopWinMerge)-1) and check:
+            while c < 5 and (index + c < len(dopWinMerge)-1) and check:
                 (nrows, ncols, third) = dopWinMerge[index + c].shape
-                if nrows == values[0] and ncols == values[1]:
+                if (nrows == values[0] and ncols == values[1]) or (index+c in newsplitscroll):
                     check = False
                 c += 1
             #Find slider reset frame
             if check:
                 c = 0
                 (nrows, ncols, third) = dopWinMerge[index].shape
-                while nrows != values[0] and (index + c < len(dopWinMerge)-1):
+                while nrows != values[0] and c < 5 and (index + c < len(dopWinMerge)-1):
                     c += 1
                     (nrows, ncols, third) = dopWinMerge[index + c].shape
-                if (index + c < len(dopWinMerge)-1):
+                if (index + c < len(dopWinMerge)-1) and c < 5:
                     newsplitscroll.append(index + c)
             
     newsplitscroll = list(dict.fromkeys(newsplitscroll))
@@ -236,4 +275,4 @@ def parse(videoFile):
     timeperpixel = length / duration / 10 #Calculate time-per-pixel
     cv2.imwrite('test.png', wholeSequence) #View parsed image
     
-    return wholeSequence, timeperpixel
+    return wholeSequence, timeperpixel, maxVel

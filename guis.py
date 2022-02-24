@@ -13,34 +13,6 @@
 import tkinter, cv2, vevoAVIparser
 from PIL import Image, ImageTk
 
-
-class Num():
-    def __init__(self, master, num):
-        self.master = master
-        master.title("Enter number of videos to analyze")
-        self.num = 0
-        
-        #Set window size and position
-        screen_width = master.winfo_screenwidth()
-        screen_height = master.winfo_screenheight()
-        self.master.geometry("320x100+%d+%d" % (screen_width/2-160, screen_height/4))
-        
-        #Number entry
-        if num == 1:
-            tkinter.Label(master, text = "Number of baseline Doppler videos:").pack()
-        else:
-            tkinter.Label(master, text = "Number of hyperemic Doppler videos:").pack()
-        self.e1 = tkinter.Entry(master)
-        self.e1.pack()
-  
-        #Save and exit
-        tkinter.Button(master, text = "Save", command = self.end).pack()
-        master.bind('<Return>', self.end) #Bind enter key to button
-        
-    def end(self, _event=None):
-        self.num = self.e1.get()
-        self.master.destroy()
-
         
         
 class Method():
@@ -78,18 +50,14 @@ class Method():
     def end(self, _event=None):
         self.master.destroy()        
         
-
         
-class DataEntry():
-    def __init__(self, master, bl, h, choice):
+        
+class DataEntryOne():
+    def __init__(self, master, bl, hyp):
         self.master = master
         self.bl = bl
-        self.h = h
-        self.cmode = choice == 'Combined Analysis'
+        self.hyp = hyp
         master.title("Input Parameters")
-        
-        #Parameters to be input
-        self.Velocity_Max = []
         self.VAngleG = []
         self.Max_Pen = []
         self.Min_Pen = []
@@ -99,95 +67,7 @@ class DataEntry():
         pic_width = int(3*screen_width/7)
         pic_height = int(pic_width/1.5)
         
-        if bl:
-            #Display first image from doppler file
-            image = vevoAVIparser.firstImage(bl)
-            imageBL = Image.fromarray(image)
-            imageBL = imageBL.resize((pic_width, pic_height), Image.ANTIALIAS)
-            self.dispBL = ImageTk.PhotoImage(imageBL)
-            self.ArtworkBL = tkinter.Label(master, image = self.dispBL)
-            self.ArtworkBL.photo = self.dispBL
-        
-            tkinter.Label(master, text = "Baseline Doppler", font = 'Helvetica 18 bold').grid(row = 0, columnspan = 2)
-            self.ArtworkBL.grid(row = 1, columnspan = 2)
-            tkinter.Label(master, text = "Max Velocity on y-axis (mm/s):").grid(row = 2)
-            self.e1 = tkinter.Entry(master)
-            self.e1.grid(row = 2, column = 1)
-            #Color mode parameters
-            if self.cmode:
-                tkinter.Label(master, text = "Angle of Probe from Verticle (degrees):").grid(row = 3)
-                self.e2 = tkinter.Entry(master)
-                self.e2.grid(row = 3, column = 1)
-                tkinter.Label(master, text = "Max Penetration Depth (mm):").grid(row = 4)
-                self.e3 = tkinter.Entry(master)
-                self.e3.grid(row = 4, column = 1)
-                tkinter.Label(master, text = "Min Penetration Depth (mm):").grid(row = 5)
-                self.e4 = tkinter.Entry(master)
-                self.e4.grid(row = 5, column = 1)
-        if h:
-            #Display first image from hyperemic file
-            image = vevoAVIparser.firstImage(h)
-            imageH = Image.fromarray(image)
-            imageH = imageH.resize((pic_width, pic_height), Image.ANTIALIAS)
-            self.dispH = ImageTk.PhotoImage(imageH)
-            self.ArtworkH = tkinter.Label(master, image = self.dispH)
-            self.ArtworkH.photo = self.dispH
-            
-            tkinter.Label(master, text = "Hyperemic Doppler", font = 'Helvetica 18 bold').grid(row = 0, column = 2, columnspan = 2)
-            self.ArtworkH.grid(row = 1, column = 2, columnspan = 2)
-            tkinter.Label(master, text = "Max Velocity on y-axis (mm/s):").grid(row = 2, column = 2)
-            self.e5 = tkinter.Entry(master)
-            self.e5.grid(row = 2, column = 3)
-            #Color mode parameters
-            if self.cmode:
-                tkinter.Label(master, text = "Angle of Probe from Verticle (degrees):").grid(row = 3, column = 2)
-                self.e6 = tkinter.Entry(master)
-                self.e6.grid(row = 3, column = 3)
-                tkinter.Label(master, text = "Max Penetration Depth (mm):").grid(row = 4, column = 2)
-                self.e7 = tkinter.Entry(master)
-                self.e7.grid(row = 4, column = 3)
-                tkinter.Label(master, text = "Min Penetration Depth (mm):").grid(row = 5, column = 2)
-                self.e8 = tkinter.Entry(master)
-                self.e8.grid(row = 5, column = 3)
-         
-        #Return input values and exit
-        tkinter.Button(master, text = "Enter", command = self.get_values, height = 5, width = 20).grid(row = 6, column = 3)
-        master.bind('<Return>', self.get_values) #Bind enter key to button
-            
-    def get_values(self, _event=None):
-        if self.bl:
-            self.Velocity_Max.append(self.e1.get())
-            if self.cmode:
-                self.VAngleG.append(self.e2.get())
-                self.Max_Pen.append(self.e3.get())
-                self.Min_Pen.append(self.e4.get())
-        if self.h:
-            self.Velocity_Max.append(self.e5.get())
-            if self.cmode:
-                self.VAngleG.append(self.e6.get())
-                self.Max_Pen.append(self.e7.get())
-                self.Min_Pen.append(self.e8.get())
-        self.master.destroy()
-        
-        
-        
-class DataEntryOne():
-    def __init__(self, master, bl, choice):
-        self.master = master
-        self.bl = bl
-        self.cmode = choice == 'Combined Analysis'
-        master.title("Input Parameters")
-        self.Velocity_Max = 0
-        self.VAngleG = 0
-        self.Max_Pen = 0
-        self.Min_Pen = 0
-        
-        #Screen and picture size
-        screen_width = master.winfo_screenwidth()
-        pic_width = int(3*screen_width/7)
-        pic_height = int(pic_width/1.5)
-        
-        #Display first image from doppler file
+        #Display first image from bl doppler file
         image = vevoAVIparser.firstImage(bl)
         imageBL = Image.fromarray(image)
         imageBL = imageBL.resize((pic_width, pic_height), Image.ANTIALIAS)
@@ -195,32 +75,48 @@ class DataEntryOne():
         self.ArtworkBL = tkinter.Label(master, image = self.dispBL)
         self.ArtworkBL.photo = self.dispBL
     
-        tkinter.Label(master, text = "Doppler Video", font = 'Helvetica 18 bold').grid(row = 0, columnspan = 2)
-        self.ArtworkBL.grid(row = 1, columnspan = 2)
-        tkinter.Label(master, text = "Max Velocity on y-axis (mm/s):").grid(row = 2)
+        tkinter.Label(master, text = "Colormode Values", font = 'Helvetica 18 bold').grid(row = 0, columnspan = 4)
+        self.ArtworkBL.grid(row = 1, column=0, columnspan=2)
+        tkinter.Label(master, text = "Angle of Probe from Verticle (degrees):").grid(row = 2)
         self.e1 = tkinter.Entry(master)
         self.e1.grid(row = 2, column = 1)
-        if self.cmode:
-                tkinter.Label(master, text = "Angle of Probe from Verticle (degrees):").grid(row = 3)
-                self.e2 = tkinter.Entry(master)
-                self.e2.grid(row = 3, column = 1)
-                tkinter.Label(master, text = "Max Penetration Depth (mm):").grid(row = 4)
-                self.e3 = tkinter.Entry(master)
-                self.e3.grid(row = 4, column = 1)
-                tkinter.Label(master, text = "Min Penetration Depth (mm):").grid(row = 5)
-                self.e4 = tkinter.Entry(master)
-                self.e4.grid(row = 5, column = 1)
+        tkinter.Label(master, text = "Max Penetration Depth (mm):").grid(row = 3)
+        self.e2 = tkinter.Entry(master)
+        self.e2.grid(row = 3, column = 1)
+        tkinter.Label(master, text = "Min Penetration Depth (mm):").grid(row = 4)
+        self.e3 = tkinter.Entry(master)
+        self.e3.grid(row = 4, column = 1)
+        
+        #Display first image from hyperemia doppler file
+        image2 = vevoAVIparser.firstImage(hyp)
+        imageH = Image.fromarray(image2)
+        imageH = imageH.resize((pic_width, pic_height), Image.ANTIALIAS)
+        self.dispH = ImageTk.PhotoImage(imageH)
+        self.ArtworkH = tkinter.Label(master, image = self.dispH)
+        self.ArtworkH.photo = self.dispH
+    
+        self.ArtworkH.grid(row = 1, column =2, columnspan = 2)
+        tkinter.Label(master, text = "Angle of Probe from Verticle (degrees):").grid(row = 2, column = 2)
+        self.e4 = tkinter.Entry(master)
+        self.e4.grid(row = 2, column = 3)
+        tkinter.Label(master, text = "Max Penetration Depth (mm):").grid(row = 3, column = 2)
+        self.e5 = tkinter.Entry(master)
+        self.e5.grid(row = 3, column = 3)
+        tkinter.Label(master, text = "Min Penetration Depth (mm):").grid(row = 4, column = 2)
+        self.e6 = tkinter.Entry(master)
+        self.e6.grid(row = 4, column = 3)
          
         #Return input values and exit
-        tkinter.Button(master, text = "Enter", command = self.get_values, height = 5, width = 20).grid(row = 6, column = 1)
+        tkinter.Button(master, text = "Enter", command = self.get_values, height = 5, width = 20).grid(row = 5, column = 3)
         master.bind('<Return>', self.get_values) #Bind enter key to button
         
     def get_values(self, _event=None):
-        self.Velocity_Max = self.e1.get()
-        if self.cmode:
-                self.VAngleG = self.e2.get()
-                self.Max_Pen = self.e3.get()
-                self.Min_Pen = self.e4.get()
+        self.VAngleG.append(self.e1.get())
+        self.Max_Pen.append(self.e2.get())
+        self.Min_Pen.append(self.e3.get())
+        self.VAngleG.append(self.e4.get())
+        self.Max_Pen.append(self.e5.get())
+        self.Min_Pen.append(self.e6.get())
         self.master.destroy()
         
 

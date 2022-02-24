@@ -57,7 +57,11 @@ def vesselDiam(image, pixelScale, run):
             cv2.drawContours(mask, vessel, -1, 0, -1)
     
     if len(diameters) > 0:
-        name = str(run) + 'rep' + str(max(diameters)) + '.png'
+        if (run == 0):
+            title = 'bl_'
+        else:
+            title = 'hyperemia_'
+        name = title + str(max(diameters)) + '.png'
         comb = cv2.bitwise_and(edges, edges, mask=mask)
         comb = maskedImageGray + comb
         saveim = Image.fromarray(comb)

@@ -104,7 +104,6 @@ def analyse(videoFile, videoFileCW, colorScale, angle, run):
     for entdiam in diamMode:
         if entdiam < botcut or entdiam > topcut:
             diamMode.remove(entdiam)
-            print('Removed: ' + str(entdiam) + ' from run ' + str(run))
     
     
     ###Calculate and return parameters
@@ -121,7 +120,6 @@ def analyse(videoFile, videoFileCW, colorScale, angle, run):
         maximum = [i for i, x in enumerate(modes) if x[1] == freqMode]
         maxVals = [modes[i][0] for i in maximum]
         mode = max(maxVals) #Maximum mode
-        print(mean)
     else:
         mode = 0
         freqMode = 0
