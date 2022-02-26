@@ -75,7 +75,7 @@ def parse(videoFile):
     
     #Values depending on video size
     ##Note: [slider bar row, slider bar column, temperature black-out, Vevo logo black-out, slide bar minimum]
-    print('height: ' + str(height) + ' width: ' + str(width))
+    #print('height: ' + str(height) + ' width: ' + str(width))
     if width == 880 and height == 666:
         values = [378, 772, 830, 34, 500]
     elif width == 1168 and height == 864:
@@ -221,7 +221,6 @@ def parse(videoFile):
                     newsplitscroll.append(index + c)
             
     newsplitscroll = list(dict.fromkeys(newsplitscroll))
-    print(newsplitscroll)
    
     ###Merge images around slider bar reset
     newFirst = []
@@ -273,6 +272,6 @@ def parse(videoFile):
     wholeSequence = wholeSequence[values[3]-1:, :] #Remove Vevo logo
     (c, length) = wholeSequence.shape #Find pixel length of image
     timeperpixel = length / duration / 10 #Calculate time-per-pixel
-    cv2.imwrite('test.png', wholeSequence) #View parsed image
+    #cv2.imwrite('test.png', wholeSequence) #View parsed image
     
     return wholeSequence, timeperpixel, maxVel

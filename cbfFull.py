@@ -259,10 +259,10 @@ for picture in pics:
         count+=1
             
     #View ecg peaks
-    peakImg = ecgRegionBinary
-    peakImg.T[locs] = 255
-    filenamepeak = 'peaks' + str(countALL) + '.png'
-    cv2.imwrite(filenamepeak, peakImg)
+    #peakImg = ecgRegionBinary
+    #peakImg.T[locs] = 255
+    #filenamepeak = 'peaks' + str(countALL) + '.png'
+    #cv2.imwrite(filenamepeak, peakImg)
     
     #Calculate beats-per-minute
     bpm = []
