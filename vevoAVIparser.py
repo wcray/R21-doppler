@@ -89,7 +89,7 @@ def parse(videoFile):
     else:
         #Default values
         values = [round(0.567 * height), round(0.875 * width), round(0.895 * width), round(0.125*height)-67, 1000]
-    print('Using values: ' + str(values))
+    #print('Using values: ' + str(values))
 
 
 
