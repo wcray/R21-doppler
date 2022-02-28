@@ -29,8 +29,7 @@ startTime = time.perf_counter()
 #Select folder containing video files to be analyzed
 root = tkinter.Tk()
 root.withdraw()
-#folderpath = filedialog.askdirectory(parent = root, initialdir = "/", title = "Select Folder Path")
-folderpath = '/Users/jamieb/Documents/videos'
+folderpath = filedialog.askdirectory(parent = root, initialdir = "/", title = "Select Folder Path")
 
 #Input filename where doppler analysis results will be stored
 savefile = filedialog.asksaveasfilename(parent = root, initialdir = folderpath, title = "Save Results As:")
@@ -72,7 +71,6 @@ for video in filename:
     pics.append(pictureBL)
     TP.append(timeperpixelBL)
     velocityMax.append(maxVel) #Store maximum velocity
-    print('MaxVel: ' + str(maxVel))
     
     
 
@@ -261,10 +259,10 @@ for picture in pics:
         count+=1
             
     #View ecg peaks
-    peakImg = ecgRegionBinary
-    peakImg.T[locs] = 255
-    filenamepeak = 'peaks' + str(countALL) + '.png'
-    cv2.imwrite(filenamepeak, peakImg)
+    #peakImg = ecgRegionBinary
+    #peakImg.T[locs] = 255
+    #filenamepeak = 'peaks' + str(countALL) + '.png'
+    #cv2.imwrite(filenamepeak, peakImg)
     
     #Calculate beats-per-minute
     bpm = []
@@ -332,7 +330,7 @@ for picture in pics:
         #Diastolic velocity or beginning of diastolic phase (BD)
         fifteenCycle = (timeCycle[-1]-timeCycle[0]) * .075 #7.5% of total beat duration
         fifteenWinStart = timeCycle[PDAloc] - fifteenCycle #Time 7.5% prior to peak
-k
+
         index15 = np.argmin([abs(x - fifteenWinStart) for x in timeCycle]) #Find index of time closest to %7.5
         DV1vel = min(filtEnvelope[index15:PDAloc+1]) #Decay velocity
         DV1time = timeCycle[[i for i, x in enumerate(filtEnvelope) if x == DV1vel][0]] #Decay velocity time
